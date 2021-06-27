@@ -16,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.siddharth.moviecatalogservice.models.CatalogItem;
 import com.siddharth.moviecatalogservice.models.Movie;
 import com.siddharth.moviecatalogservice.models.Rating;
+import com.siddharth.moviecatalogservice.models.UserRating;
 
 @RestController
 @RequestMapping("/catalog")
@@ -30,33 +31,17 @@ public class MovieCatalogResource {
 	@RequestMapping("/{userId}")// curly braces say that it is  a variable
 	public List<CatalogItem> getCatalog(@PathVariable("userId")  String userID){
 		
-		
-		
-		//get all rated movie IDs- hard coded for now
-		List<Rating> ratings = Arrays.asList(
-				new Rating("1234",4),
-				new Rating("5678",3),
-				new Rating("9102",2)
-				); 
-		
-		//for each movie ID , call movie Info Service and get details
-		//we have the movies and now we will make REST API call to movie info
-		
-		return ratings.stream().map(rating -> {
+		//get UserRating object which contains a list of user rating as properties
+		UserRating ratings = restTemplate.getForObject("http://localhost:8083/ratingsdata/users/"+ userID, UserRating.class);
 			
-			Movie movie = restTemplate.getForObject("http://localhost:8082/movies/"+rating.getMovieId(), Movie.class);
+		//we got to fetch the list from the UserRating object hence ratings.getUserRatings
+		return ratings.getUserRating().stream().map(x -> {
 			
-			/*
-			//gives instance of Movie class. We are here using async style to carry out sync commands
-			Movie movie = webClientBuilder.build() //uses builder pattern and gives us client 
-							.get()
-							.uri("http://localhost:8082/movies/\"+rating.getMovieId()")
-					 		.retrieve()
-							.bodyToMono(Movie.class)
-							.block();
-			*/
+			//for each movie id call movie info service and get details
+			Movie movie = restTemplate.getForObject("http://localhost:8082/movies/"+x.getMovieId(), Movie.class);
 			
-			return new CatalogItem(movie.getName(), "Test",rating.getRating());
+			//put them all together
+			return new CatalogItem(movie.getName(), "Test",x.getRating());
 		})
 		.collect(Collectors.toList());
 	
