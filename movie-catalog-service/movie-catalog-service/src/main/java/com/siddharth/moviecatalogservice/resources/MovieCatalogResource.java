@@ -6,10 +6,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.siddharth.moviecatalogservice.models.CatalogItem;
 import com.siddharth.moviecatalogservice.models.Movie;
@@ -22,8 +24,14 @@ public class MovieCatalogResource {
 	@Autowired
 	private RestTemplate restTemplate;
 	
+	@Autowired
+	private WebClient.Builder webClientBuilder;
+	
 	@RequestMapping("/{userId}")// curly braces say that it is  a variable
 	public List<CatalogItem> getCatalog(@PathVariable("userId")  String userID){
+		
+		
+		
 		//get all rated movie IDs- hard coded for now
 		List<Rating> ratings = Arrays.asList(
 				new Rating("1234",4),
@@ -35,7 +43,19 @@ public class MovieCatalogResource {
 		//we have the movies and now we will make REST API call to movie info
 		
 		return ratings.stream().map(rating -> {
+			
 			Movie movie = restTemplate.getForObject("http://localhost:8082/movies/"+rating.getMovieId(), Movie.class);
+			
+			/*
+			//gives instance of Movie class. We are here using async style to carry out sync commands
+			Movie movie = webClientBuilder.build() //uses builder pattern and gives us client 
+							.get()
+							.uri("http://localhost:8082/movies/\"+rating.getMovieId()")
+					 		.retrieve()
+							.bodyToMono(Movie.class)
+							.block();
+			*/
+			
 			return new CatalogItem(movie.getName(), "Test",rating.getRating());
 		})
 		.collect(Collectors.toList());
